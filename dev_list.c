@@ -238,11 +238,14 @@ uint8_t list_dev_print(devList_t *lst)
                 printf("%02x",p->dev.extAddr[j]);
             printf("\n");
             printf("\tgrpCnt:%d\n",p->dev.grpCnt);
-            printf("\tgrpList:");
-            for (j=0; j<p->dev.grpCnt; j++) {
-                printf("%3d,",p->dev.grpList[j]);
+            if (p->dev.grpCnt) {
+                printf("\tgrpList:");
+                for (j=0; j<p->dev.grpCnt-1; j++) {
+                    printf("%3d,",p->dev.grpList[j]);
+                }
+                printf("%3d",p->dev.grpList[j]);
+                printf ("\n");
             }
-            printf ("\n");
             p = p->next;
         }
     }

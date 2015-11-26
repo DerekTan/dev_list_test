@@ -59,7 +59,7 @@ uint8_t add_online_dev( uint16_t shortaddr, uint8_t extaddr[] )
 
     /* generate a new node */
     dev.shortAddr = shortaddr;
-    memcmp(dev.extAddr, extaddr, 8);
+    memcpy(dev.extAddr, extaddr, 8);
     dev.grpCnt = 0;
     dev.grpList = NULL;
 
@@ -135,24 +135,79 @@ uint8_t add_offline_dev ( uint16_t shortaddr )
     return 0;
 }		/* -----  end of function add_offline_dev  ----- */
 
+static uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group )
+{
+    uint16_t *pNewGrpList;
+    uint8_t i;
+    for ( i=0; i<pNode->dev.grpCnt; i++) {
+        if (pNode->dev.grpList[i] == group) { //already in group list
+            return 0;
+        }
+    }
+    /* group not in group list, add it */
+    pNode->dev.grpCnt++;
+    pNewGrpList = realloc( pNode->dev.grpList, pNode->dev.grpCnt * sizeof(uint16_t) );
+    if ( pNewGrpList ) { //not NULL
+        pNode->dev.grpList = pNewGrpList;
+        pNode->dev.grpList[pNode->dev.grpCnt - 1] = group;
+        return 0;
+    }
+    else { // fail to realloc
+        pNode->dev.grpCnt--;
+        return 1;
+    }
+}
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  add_dev_group_info
- *  Description:  add group info to the device (update if already exist)
+ *  Description:  add a single group to the device
  *       Return:  0 - success
  *                1 - fail
  *    Attention:  caller should provide the memory space for grplist
  *    =====================================================================================
  */
-uint8_t add_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *grplist )
+uint8_t add_dev_group_info ( uint16_t shortaddr, uint16_t group )
 {
     devNode_t *pNode;
+    uint16_t *pNewGrpList;
+    uint8_t i;
+    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+        return add_group_info_to_node( pNode, group );
+    }
+
+    /* check offline -- is this a must? */
+    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_offlineList, shortaddr)) ) {
+        return add_group_info_to_node( pNode, group );
+    }
+    /* short address not found, return fail */
+    return 1;
+}		/* -----  end of function add_dev_group_info  ----- */
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  update_dev_group_info
+ *  Description:  update group info to the device (update if already exist)
+ *       Return:  0 - success
+ *                1 - fail
+ *    Attention:  caller should provide the memory space for grplist
+ *    =====================================================================================
+ */
+uint8_t update_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *grplist )
+{
+    devNode_t *pNode;
+    uint16_t *newGpLst;
+    newGpLst = (uint16_t *)malloc( grpcnt * sizeof(uint16_t) );
+    if ( NULL == newGpLst )
+        return 1;
+    memcpy( newGpLst, grplist, grpcnt * sizeof(uint16_t) );
+
     if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
         if (pNode->dev.grpCnt != 0) {
             free(pNode->dev.grpList);
             //pNode->dev.grpList = NULL;
         }
-        pNode->dev.grpList = grplist;
+        pNode->dev.grpCnt = grpcnt;
+        pNode->dev.grpList = newGpLst;
         return 0;
     }
 
@@ -162,12 +217,12 @@ uint8_t add_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *grpli
             free(pNode->dev.grpList);
             //pNode->dev.grpList = NULL;
         }
-        pNode->dev.grpList = grplist;
+        pNode->dev.grpCnt = grpcnt;
+        pNode->dev.grpList = newGpLst;
         return 0;
     }
     return 1;
-}		/* -----  end of function add_dev_group_info  ----- */
-
+}		/* -----  end of function update_dev_group_info  ----- */
 
 /*
  * ===  FUNCTION  ======================================================================

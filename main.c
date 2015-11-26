@@ -28,74 +28,109 @@ uint8_t ctoi(uint8_t c);
 uint8_t get_num_byte(uint8_t *s);
 uint8_t get_extaddr(uint8_t *pext, uint8_t *pstr);
 uint16_t u8_to_u16(uint8_t msb, uint8_t lsb);
-uint16_t get_shortaddr(uint8_t *p);
+uint16_t get_num_from_dec_str(uint8_t *p);
+uint8_t do_cmd_str(char *instr, uint8_t len);
 
 int main(void) {
     char instr[128];
-    uint16_t shortaddr;
-    uint8_t grpcnt;
-    uint16_t grplist[128];
-    uint8_t extaddr[8];
-    uint8_t num;
-    uint16_t ret[128];
-    char *p;
 
     create_online_list();
     create_offline_list();
+
+    do_cmd_str("a11,1122334455667788", 128);
+    do_cmd_str("a2,1234567812345678", 128);
+    do_cmd_str("a333,aabbccddeeff9900", 128);
+    do_cmd_str("a1234,efaadefada001122", 128);
+    do_cmd_str("a5555,1234123412341234", 128);
 
     for ( ;; ) {
         printf("[a]dd\n"
                "[d]elete\n"
                "[p]rint online devices\n"
                "[g]et group members\n"
-               "[i]nfo for group\n"
+               "[u]pdate group info\n"
+               "add group [i]nfo\n"
                "[q]uit\n");
+
         if ( fgets(instr, 128, stdin) ) {
-            if (NULL != (p = strchr(instr, '\n')))
-                *p = '\0';
-            switch (instr[0]) {
-                case 'a':   //add_online_dev
-                    p = strchr(instr, ',');
-                    *p = '\0';
-                    shortaddr = get_shortaddr(instr+1);
-                    get_extaddr(extaddr, p+1);
-                    add_online_dev(shortaddr, extaddr);
-                    break;
-                case 'd':   //add_offline_dev
-                    if (NULL != (p = strchr(instr, ',')))
-                        *p = '\0';
-                    shortaddr = get_shortaddr(instr+1);
-                    add_offline_dev(shortaddr);
-                    break;
-                case 'p':   //print online dev
-                    online_dev_print();
-                    offline_dev_print();
-                    break;
-                case 'g':   //get group member
-                    if (NULL != (p = strchr(instr, ',')))
-                        *p = '\0';
-                    shortaddr = get_shortaddr(instr+1);
-                    num = get_group_member(shortaddr, ret);
-                    print_n_u16(num, ret);
-                    break;
-                case 'i':   //add group info
-                    break;
-                case 'u':   //update group info
-                    break;
-                case 'q':
-                    goto Exit;
-                    break;
-                default:
-                    break;
-            }
+            if (do_cmd_str(instr, 128))
+                break;
 
         }
     }
-Exit:
     return 0;
 }
 
-uint16_t get_shortaddr(uint8_t *p)
+uint8_t do_cmd_str(char *s, uint8_t len)
+{
+    uint16_t shortaddr;
+    uint8_t grpcnt;
+    uint16_t grplist[128];
+    uint8_t extaddr[8];
+    uint8_t num;
+    uint8_t i;
+    uint16_t ret[128];
+    char *p = NULL;
+    char instr[128];
+    memcpy(instr, s, len);
+    if (NULL != (p = strchr(instr, '\n')))
+        *p = '\0';
+    switch (instr[0]) {
+        case 'a':   //add_online_dev
+            if (NULL != (p = strchr(instr, ',')))
+                *p = '\0';
+            shortaddr = get_num_from_dec_str(instr+1);
+            if (p && *(p+1))
+                get_extaddr(extaddr, p+1);
+            else
+                memcpy(extaddr, INVALID_EXTADDR, 8);
+            add_online_dev(shortaddr, extaddr);
+            break;
+        case 'd':   //add_offline_dev
+            if (NULL != (p = strchr(instr, ',')))
+                *p = '\0';
+            shortaddr = get_num_from_dec_str(instr+1);
+            add_offline_dev(shortaddr);
+            break;
+        case 'p':   //print online dev
+            online_dev_print();
+            offline_dev_print();
+            break;
+        case 'g':   //get group member
+            if (NULL != (p = strchr(instr, ',')))
+                *p = '\0';
+            shortaddr = get_num_from_dec_str(instr+1);
+            num = get_group_member(shortaddr, ret);
+            print_n_u16(num, ret);
+            break;
+        case 'i':   //add group info
+            p = strtok(instr+1, ",");
+            shortaddr = get_num_from_dec_str(p);
+            p = strtok(NULL, ",");
+            grplist[0] = get_num_from_dec_str(p);
+            add_dev_group_info(shortaddr, grplist[0]);
+            break;
+        case 'u':   //update group info
+            p = strtok(instr+1, ",");
+            shortaddr = get_num_from_dec_str(p);
+            p = strtok(NULL, ",");
+            grpcnt = get_num_from_dec_str(p);
+            for (i = 0; i < grpcnt; i++)
+            {
+                p = strtok(NULL, ",");
+                grplist[i] = get_num_from_dec_str(p);
+            }
+            update_dev_group_info(shortaddr, grpcnt, grplist);
+            break;
+        case 'q':
+            return 1;
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+uint16_t get_num_from_dec_str(uint8_t *p)
 {
     uint16_t ret = 0;
     while (*p) {
