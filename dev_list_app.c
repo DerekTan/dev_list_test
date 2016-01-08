@@ -20,6 +20,7 @@
 #include <string.h>
 #include "dev_list.h"
 #include "dev_list_app.h"
+#include "test.h"
 
 const uint8_t INVALID_EXTADDR[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -46,13 +47,13 @@ uint8_t create_offline_list(void)
 
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  add_online_dev
+ *         Name:  add_online_dev_addr
  *  Description:  add device to online list
  *       Return:  0 - success
  *                1 - fail
  * =====================================================================================
  */
-uint8_t add_online_dev( uint16_t shortaddr, uint8_t extaddr[] )
+uint8_t add_online_dev_addr( uint16_t shortaddr, const uint8_t extaddr[] )
 {
     devNode_t *pnode;
     devData_t dev;
@@ -73,6 +74,8 @@ uint8_t add_online_dev( uint16_t shortaddr, uint8_t extaddr[] )
             list_node_add(g_onlineList, pnode);
             return 0;
         }
+        // create new node then add to online device list
+        return list_dev_add(g_onlineList, dev);
     }
 
     /* check extAddr */
@@ -104,18 +107,18 @@ uint8_t add_online_dev( uint16_t shortaddr, uint8_t extaddr[] )
     list_dev_del_by_dev_extaddr(g_offlineList, dev);
     // create new node then add to online device list
     return list_dev_add(g_onlineList, dev);
-}		/* -----  end of function add_online_dev  ----- */
+}		/* -----  end of function add_online_dev_addr  ----- */
 
 
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  add_offline_dev
+ *         Name:  add_offline_dev_addr
  *  Description:  add device to offline list
  *       Return:  0 - success
  *                1 - fail
  * =====================================================================================
  */
-uint8_t add_offline_dev ( uint16_t shortaddr )
+uint8_t add_offline_dev_addr ( uint16_t shortaddr )
 {
     devNode_t *pnode;
     devData_t dev;
@@ -133,30 +136,8 @@ uint8_t add_offline_dev ( uint16_t shortaddr )
         return 0;
     }
     return 0;
-}		/* -----  end of function add_offline_dev  ----- */
+}		/* -----  end of function add_offline_dev_addr  ----- */
 
-static uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group )
-{
-    uint16_t *pNewGrpList;
-    uint8_t i;
-    for ( i=0; i<pNode->dev.grpCnt; i++) {
-        if (pNode->dev.grpList[i] == group) { //already in group list
-            return 0;
-        }
-    }
-    /* group not in group list, add it */
-    pNode->dev.grpCnt++;
-    pNewGrpList = realloc( pNode->dev.grpList, pNode->dev.grpCnt * sizeof(uint16_t) );
-    if ( pNewGrpList ) { //not NULL
-        pNode->dev.grpList = pNewGrpList;
-        pNode->dev.grpList[pNode->dev.grpCnt - 1] = group;
-        return 0;
-    }
-    else { // fail to realloc
-        pNode->dev.grpCnt--;
-        return 1;
-    }
-}
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  add_dev_group_info
@@ -169,17 +150,17 @@ static uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group )
 uint8_t add_dev_group_info ( uint16_t shortaddr, uint16_t group )
 {
     devNode_t *pNode;
-    uint16_t *pNewGrpList;
-    uint8_t i;
     if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
         return add_group_info_to_node( pNode, group );
     }
 
-    /* check offline -- is this a must? */
-    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_offlineList, shortaddr)) ) {
-        return add_group_info_to_node( pNode, group );
+    /* not found, add it */
+    if (0 == add_online_dev_addr(shortaddr, INVALID_EXTADDR)) {
+        if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+            return add_group_info_to_node( pNode, group );
+        }
+
     }
-    /* short address not found, return fail */
     return 1;
 }		/* -----  end of function add_dev_group_info  ----- */
 
@@ -195,31 +176,16 @@ uint8_t add_dev_group_info ( uint16_t shortaddr, uint16_t group )
 uint8_t update_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *grplist )
 {
     devNode_t *pNode;
-    uint16_t *newGpLst;
-    newGpLst = (uint16_t *)malloc( grpcnt * sizeof(uint16_t) );
-    if ( NULL == newGpLst )
-        return 1;
-    memcpy( newGpLst, grplist, grpcnt * sizeof(uint16_t) );
-
     if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
-        if (pNode->dev.grpCnt != 0) {
-            free(pNode->dev.grpList);
-            //pNode->dev.grpList = NULL;
-        }
-        pNode->dev.grpCnt = grpcnt;
-        pNode->dev.grpList = newGpLst;
-        return 0;
+        return dev_node_update(pNode, grpcnt, grplist);
     }
+    else {
+        if (0 == add_online_dev_addr(shortaddr, INVALID_EXTADDR)) {
+            if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+                return dev_node_update(pNode, grpcnt, grplist);
+            }
 
-    /* check offline -- is this a must? */
-    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_offlineList, shortaddr)) ) {
-        if (pNode->dev.grpCnt != 0) {
-            free(pNode->dev.grpList);
-            //pNode->dev.grpList = NULL;
         }
-        pNode->dev.grpCnt = grpcnt;
-        pNode->dev.grpList = newGpLst;
-        return 0;
     }
     return 1;
 }		/* -----  end of function update_dev_group_info  ----- */
@@ -275,16 +241,28 @@ uint8_t offline_dev_print(void)
     return list_dev_print(g_offlineList);
 }
 
-
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  del_dev_group_info
- *  Description:  get all groups
+ *  Description:  delete a group id from group list
  * =====================================================================================
  */
-uint8_t del_dev_group_info( uint16_t shortaddr, uint16_t grpid )
+uint8_t del_dev_group_info( uint16_t shortaddr, uint16_t group )
 {
-    return 0;
+    devNode_t *pNode;
+
+    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+        return del_group_info_from_node( pNode, group );
+    }
+
+    /* not found, add it */
+    if (0 == add_online_dev_addr(shortaddr, INVALID_EXTADDR)) {
+        if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+            return del_group_info_from_node( pNode, group );
+        }
+
+    }
+    return 1;
 }		/* -----  end of function del_dev_group_info  ----- */
 
 /*
@@ -295,20 +273,66 @@ uint8_t del_dev_group_info( uint16_t shortaddr, uint16_t grpid )
  */
 uint8_t get_dev_extaddr( uint16_t shortaddr, uint8_t extaddr[] )
 {
-    return 0;
+    devNode_t *pNode;
+
+    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_onlineList, shortaddr)) ) {
+        memcpy(extaddr, pNode->dev.extAddr, 8);
+        return 0;
+    }
+
+    /* check offline */
+    if ( NULL != (pNode = list_find_dev_by_shortaddr(g_offlineList, shortaddr)) ) {
+        memcpy(extaddr, pNode->dev.extAddr, 8);
+        return 0;
+    }
+
+    // not found
+    memcpy(extaddr, INVALID_EXTADDR, 8);
+    return 1;
 }		/* -----  end of function get_dev_extaddr  ----- */
 
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  get_all_groups
- *  Description:
+ *  Description:  get all online groups
+ *       Return:  the actual number of groups
  * =====================================================================================
  */
 uint8_t get_all_groups(uint16_t *grplist, uint8_t max)
 {
-    return 0;
+    return list_dev_get_all_groups(g_onlineList, grplist, max);
 }		/* -----  end of function get_all_groups  ----- */
 
+uint8_t del_all_group_info_from_node(uint16_t addr)
+{
+    update_dev_group_info ( addr, 0, NULL );
+    return 0;
+}
+
+uint8_t del_all_group_info_from_group(uint16_t group)
+{
+    devNode_t *p;
+    uint8_t i;
+    uint8_t ret = 1;
+    devList_t *lst = g_onlineList;
+
+    p = lst->head;
+    while ( p ) {
+        if ( p->dev.grpCnt ) { //if the node blongs to any group
+            for ( i=0; i<p->dev.grpCnt; i++ ) {
+                if (p->dev.grpList[i] == group) {
+                    free(p->dev.grpList);
+                    p->dev.grpCnt = 0;
+                    p->dev.grpList = NULL;
+                    ret = 0;
+                    break;
+                }
+            }
+        }
+        p = p->next;
+    }
+    return ret;
+}
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  del_all_groups
@@ -317,5 +341,11 @@ uint8_t get_all_groups(uint16_t *grplist, uint8_t max)
  */
 uint8_t del_all_groups(uint8_t addrMode, uint16_t addr)
 {
-    return 0;
+    if ( addrMode == afAddr16Bit ) {
+        return del_all_group_info_from_node(addr);
+    }
+    if ( addrMode == afAddrGroup ) {
+        return del_all_group_info_from_group(addr);
+    }
+    return 1;
 }		/* -----  end of function del_all_groups  ----- */

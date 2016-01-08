@@ -26,4 +26,13 @@ typedef unsigned int uint16_t;
     #define NULL    0
 #endif
 #endif
+typedef enum
+{
+  afAddrNotPresent = 0,
+  afAddrGroup      = 1,
+  afAddr16Bit      = 2,
+  afAddr64Bit      = 3,
+  afAddrBroadcast  = 15
+} afAddrMode_t;
+
 #endif

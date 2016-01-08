@@ -166,6 +166,36 @@ uint8_t *list_clear(devList_t *lst)
     return 0;
 }
 
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  dev_node_create
+ *  Description:
+ * =====================================================================================
+ */
+devNode_t *dev_node_create( uint16_t shortaddr, const uint8_t extaddr[], uint8_t grpcnt, uint16_t *grplist)
+{
+    devNode_t *pNode = NULL;
+    uint16_t *newGpLst = NULL;
+    pNode = malloc(sizeof(devNode_t));
+    if (pNode) {
+        if (grpcnt) {
+            newGpLst = (uint16_t *)malloc( grpcnt * sizeof(uint16_t) );
+            if ( NULL == newGpLst ) {
+                free(pNode);
+                return NULL;
+            }
+        }
+        else {
+            newGpLst = NULL;
+        }
+        pNode->dev.shortAddr = shortaddr;
+        memcpy(pNode->dev.extAddr, extaddr, 8);
+        pNode->dev.grpCnt = grpcnt;
+        pNode->dev.grpList = newGpLst;
+    }
+    return pNode;
+}		/* -----  end of function dev_node_create  ----- */
+
 devList_t *list_node_add(devList_t *lst, devNode_t *pNode)
 {
     if (pNode) {
@@ -176,6 +206,34 @@ devList_t *list_node_add(devList_t *lst, devNode_t *pNode)
     return lst;
 }
 
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  dev_node_update
+ *  Description:
+ * =====================================================================================
+ */
+uint8_t dev_node_update ( devNode_t *pNode, uint8_t grpcnt, uint16_t *grplist )
+{
+    uint16_t *newGpLst;
+    if (pNode) {
+        if ( grpcnt ) {
+            newGpLst = (uint16_t *)malloc( grpcnt * sizeof(uint16_t) );
+            if ( NULL == newGpLst )
+                return 1;
+            memcpy( newGpLst, grplist, grpcnt * sizeof(uint16_t) );
+        }
+        else {
+            newGpLst = NULL;
+        }
+        if (pNode->dev.grpCnt != 0) {
+            free(pNode->dev.grpList);
+        }
+        pNode->dev.grpCnt = grpcnt;
+        pNode->dev.grpList = newGpLst;
+        return 0;
+    }
+    return 1;
+}		/* -----  end of function dev_node_update  ----- */
 /*
  * ===  FUNCTION  ============================================================
  *         Name:  list_node_pop_by_shortaddr
@@ -253,6 +311,89 @@ uint8_t list_dev_print(devList_t *lst)
     return 0;
 }
 
+/*
+ * ===  FUNCTION  ============================================================
+ *         Name:  bsearch
+ *  Description:
+ *       Return:  1 - found
+ *                0 - not found
+ * ===========================================================================
+ */
+int8_t u16_bsearch(uint16_t *array, uint8_t len, uint16_t item)
+{
+    int16_t left, right, mid;
+    left = 0;
+    right = len - 1;
+    while (left <= right) {
+        mid = (left + right) >> 1;
+        if (array[mid] > item) {
+            right = mid - 1;
+        }
+        else if (array[mid] < item) {
+            left = mid + 1;
+        }
+        else {
+            return 1; //found
+        }
+    }
+    return 0; //not found
+}
+
+void u16_insert( uint16_t *array, uint8_t len, uint16_t item )
+{
+    int16_t i;
+    for ( i=len-1; i>=0; i--) {
+        if (array[i] > item) {
+            array[i+1] = array[i];
+        }
+        else {
+            break;
+        }
+    }
+    array[i+1] = item;
+}
+
+/*
+ * ===  FUNCTION  ============================================================
+ *         Name:  merge_list
+ *  Description:  merge two list into one
+ *       Return:  the len of merged list
+ * ===========================================================================
+ */
+uint8_t merge_list(uint16_t *target, uint8_t t_num, uint16_t *src, uint8_t s_num, uint8_t max)
+{
+    uint8_t i = 0;
+    for ( i=0; i<s_num; i++ ) {
+        if ( u16_bsearch(target, t_num, src[i] ) ) {
+            continue;
+        }
+        else {
+            u16_insert(target, t_num, src[i]);
+            if ( ++t_num == max )
+                break;
+        }
+    }
+    return t_num;
+}
+
+uint8_t list_dev_get_all_groups(devList_t *lst, uint16_t *grplist, uint8_t max)
+{
+    uint8_t i=0;
+    devNode_t *p;
+
+    if (lst->num) {
+        i = 0;
+        p = lst->head;
+        while ( p ) {
+            if ( p->dev.grpCnt ) {
+                i = merge_list(grplist, i, p->dev.grpList, p->dev.grpCnt, max);
+            }
+            p = p->next;
+        }
+    }
+    return i;
+}
+
 static uint8_t dev_cmp_by_addr(devData_t a, devData_t b)
 {
     return is_dev_same_addr(a, b);
@@ -266,4 +407,72 @@ static uint8_t dev_cmp_by_shortaddr(devData_t a, devData_t b)
 static uint8_t dev_cmp_by_extaddr(devData_t a, devData_t b)
 {
     return is_dev_same_ext(a, b);
+}
+
+
+/*
+ * ===  FUNCTION  ============================================================
+ *         Name:  add_group_info_to_node
+ *  Description:  add a group to the node's group list
+ * ===========================================================================
+ */
+uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group )
+{
+    uint16_t *pNewGrpList;
+    uint8_t i;
+    for ( i=0; i<pNode->dev.grpCnt; i++) {
+        if (pNode->dev.grpList[i] == group) { //already in group list
+            return 0;
+        }
+    }
+    /* group not in group list, add it */
+    pNode->dev.grpCnt++;
+    pNewGrpList = realloc( pNode->dev.grpList, pNode->dev.grpCnt * sizeof(uint16_t) );
+    if ( pNewGrpList ) { //not NULL
+        pNode->dev.grpList = pNewGrpList;
+        pNode->dev.grpList[pNode->dev.grpCnt - 1] = group;
+        return 0;
+    }
+    else { // fail to realloc
+        pNode->dev.grpCnt--;
+        return 1;
+    }
+}
+
+/*
+ * ===  FUNCTION  ============================================================
+ *         Name:  del_group_info_from_node
+ *  Description:  delete a group from the node's group list
+ * ===========================================================================
+ */
+uint8_t del_group_info_from_node( devNode_t *pNode, uint16_t group )
+{
+    uint16_t *pNewGrpList = NULL;
+    uint8_t i;
+    for ( i=0; i<pNode->dev.grpCnt; i++) {
+        if (pNode->dev.grpList[i] == group) { //in group list
+            /* group in group list, delete it */
+            pNode->dev.grpCnt--;
+            if (pNode->dev.grpCnt != 0) {
+                pNewGrpList = malloc( pNode->dev.grpCnt * sizeof(uint16_t) );
+                if ( NULL == pNewGrpList ) { // fail
+                    pNode->dev.grpCnt++;
+                    return 1;
+                }
+                else {
+                    memcpy( pNewGrpList, pNode->dev.grpList, i*sizeof(uint16_t) );
+                    memcpy( pNewGrpList+i, pNode->dev.grpList+i+1, (pNode->dev.grpCnt-i)*sizeof(uint16_t) );
+                    free(pNode->dev.grpList);
+                    pNode->dev.grpList = pNewGrpList;
+                    return 0;
+                }
+            }
+            else {
+                    free(pNode->dev.grpList);
+                    pNode->dev.grpList = NULL;
+                    return 0;
+            }
+        }
+    }
+    return 1; // group not found
 }

@@ -26,8 +26,8 @@ extern const uint8_t INVALID_EXTADDR[];
 
 uint8_t create_online_list(void);
 uint8_t create_offline_list(void);
-uint8_t add_online_dev( uint16_t shortaddr, uint8_t extaddr[] );
-uint8_t add_offline_dev( uint16_t shortaddr );
+uint8_t add_online_dev_addr( uint16_t shortaddr, const uint8_t extaddr[] );
+uint8_t add_offline_dev_addr( uint16_t shortaddr );
 uint8_t get_dev_extaddr( uint16_t shortaddr, uint8_t extaddr[] );
 uint8_t add_dev_group_info( uint16_t shortaddr, uint16_t group );
 uint8_t update_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *grplist );

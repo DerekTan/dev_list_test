@@ -3,7 +3,7 @@
  *
  *       Filename:  dev.h
  *
- *    Description:  head file for online_dev.c and offline_dev.c
+ *    Description:  head file for dev_list.c
  *
  *        Version:  1.0
  *        Created:  2015/11/18 13:54:19
@@ -55,11 +55,15 @@ uint8_t *list_clear(devList_t *lst);
 uint8_t list_dev_get_shortaddr_array(devList_t *lst, uint16_t *pArray);
 devNode_t* list_find_dev_by_shortaddr (devList_t *lst, uint16_t shortaddr);
 devNode_t *list_node_pop_by_shortaddr(devList_t *lst, uint16_t shortaddr);
-
 devList_t *list_node_add(devList_t *lst, devNode_t *pNode);
 devList_t *list_dev_del_by_dev_extaddr(devList_t *lst, devData_t dev);
 devList_t *list_dev_del_by_dev_shortaddr(devList_t *lst, devData_t dev);
 devList_t *list_dev_del_by_dev_addr(devList_t *lst, devData_t dev);
 void free_node(devNode_t *pNode);
 uint8_t list_dev_print(devList_t *lst);
+uint8_t list_dev_get_all_groups(devList_t *lst, uint16_t *grplist, uint8_t max);
+uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group );
+uint8_t del_group_info_from_node( devNode_t *pNode, uint16_t group );
+devNode_t *dev_node_create( uint16_t shortaddr, const uint8_t extaddr[], uint8_t grpcnt, uint16_t *grplist);
+uint8_t dev_node_update ( devNode_t *pNode, uint8_t grpcnt, uint16_t *grplist );
 #endif
