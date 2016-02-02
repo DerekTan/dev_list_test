@@ -34,10 +34,13 @@ uint8_t update_dev_group_info ( uint16_t shortaddr, uint8_t grpcnt, uint16_t *gr
 uint8_t del_dev_group_info( uint16_t shortaddr, uint16_t grpid );
 uint8_t get_group_member( uint16_t grpid, uint16_t *paddrlist );
 uint8_t get_online_devices(uint16_t *pArray);
+uint8_t get_online_device_num(void);
 
 uint8_t get_all_groups(uint16_t *grplist, uint8_t max);
 uint8_t del_all_groups(uint8_t addrMode, uint16_t addr);
 
 uint8_t offline_dev_print(void);
 uint8_t online_dev_print(void);
+
+void offline_all_dev ( void );
 #endif

@@ -42,7 +42,6 @@ int main(void) {
     create_online_list();
     create_offline_list();
     create_scene_list();
-#if 0
     do_cmd_str("a11,1122334455667788", 128);
     do_cmd_str("a2,1234567812345678", 128);
     do_cmd_str("a333,aabbccddeeff9900", 128);
@@ -51,16 +50,16 @@ int main(void) {
 
     do_cmd_str("ga333,1", 128);
     do_cmd_str("ga333,2", 128);
-//    do_cmd_str("ga333,3", 128);
-//    do_cmd_str("ga333,4", 128);
-//    do_cmd_str("ga333,5", 128);
-//    do_cmd_str("ga333,6", 128);
+    do_cmd_str("ga333,3", 128);
+    do_cmd_str("ga333,4", 128);
+    do_cmd_str("ga333,5", 128);
+    do_cmd_str("ga333,6", 128);
     do_cmd_str("ga11,1", 128);
-//    do_cmd_str("ga11,2", 128);
+    do_cmd_str("ga11,2", 128);
     do_cmd_str("ga11,3", 128);
-//    do_cmd_str("ga2,4", 128);
-//    do_cmd_str("ga2,5", 128);
-//    do_cmd_str("ga2,6", 128);
+    do_cmd_str("ga2,4", 128);
+    do_cmd_str("ga2,5", 128);
+    do_cmd_str("ga2,6", 128);
 
     do_cmd_str("sa11,12", 128);
     do_cmd_str("sa11,13", 128);
@@ -80,7 +79,7 @@ int main(void) {
     do_cmd_str("sa14,15", 128);
     do_cmd_str("sa14,16", 128);
     do_cmd_str("sa15,17", 128);
-#endif
+
     for ( ;; ) {
 
         if ( fgets(instr, 128, stdin) ) {

@@ -65,6 +65,11 @@ uint8_t list_dev_get_shortaddr_array(devList_t *lst, uint16_t *pArray)
     return lst->num;
 }
 
+uint8_t list_dev_get_dev_num(devList_t *lst)
+{
+    return lst->num;
+}
+
 uint8_t list_dev_add(devList_t *lst, devData_t dev)
 {
     devNode_t *pNode = (devNode_t *)malloc(sizeof(devNode_t));
@@ -355,12 +360,12 @@ void u16_insert( uint16_t *array, uint8_t len, uint16_t item )
 
 /*
  * ===  FUNCTION  ============================================================
- *         Name:  merge_list
+ *         Name:  merge_group_list
  *  Description:  merge two list into one
  *       Return:  the len of merged list
  * ===========================================================================
  */
-uint8_t merge_list(uint16_t *target, uint8_t t_num, uint16_t *src, uint8_t s_num, uint8_t max)
+static uint8_t merge_group_list(uint16_t *target, uint8_t t_num, uint16_t *src, uint8_t s_num, uint8_t max)
 {
     uint8_t i = 0;
     for ( i=0; i<s_num; i++ ) {
@@ -386,7 +391,7 @@ uint8_t list_dev_get_all_groups(devList_t *lst, uint16_t *grplist, uint8_t max)
         p = lst->head;
         while ( p ) {
             if ( p->dev.grpCnt ) {
-                i = merge_list(grplist, i, p->dev.grpList, p->dev.grpCnt, max);
+                i = merge_group_list(grplist, i, p->dev.grpList, p->dev.grpCnt, max);
             }
             p = p->next;
         }
@@ -476,3 +481,33 @@ uint8_t del_group_info_from_node( devNode_t *pNode, uint16_t group )
     }
     return 1; // group not found
 }
+
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  mov_dev_list
+ *  Description:  move src list to target list:
+ *                  append src list to target list
+ *                  clear src list
+ * =====================================================================================
+ */
+void mov_dev_list(devList_t *t_lst, devList_t *s_lst)
+{
+    devNode_t *ptemp;
+    if ( s_lst->num != 0 ) { /* s_lst not empty */
+        ptemp = t_lst->head;
+        if ( ptemp ) { /* t_lst not empty */
+            while ( ptemp->next ) {
+                ptemp = ptemp->next;
+            }
+            ptemp->next = s_lst->head;
+        }
+        else { /* t_lst empty */
+            t_lst->head = s_lst->head;
+        }
+        t_lst->num += s_lst->num;
+
+        s_lst->head = NULL;
+        s_lst->num = 0;
+    }
+}		/* -----  end of function mov_dev_list  ----- */

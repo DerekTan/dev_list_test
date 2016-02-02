@@ -20,7 +20,7 @@
 #include <string.h>
 #include "dev_list.h"
 #include "dev_list_app.h"
-#include "test.h"
+#include "zcl_cmd.h"
 
 const uint8_t INVALID_EXTADDR[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -231,6 +231,11 @@ uint8_t get_online_devices(uint16_t *pArray)
     return list_dev_get_shortaddr_array(g_onlineList, pArray);
 }		/* -----  end of function get_online_devices  ----- */
 
+uint8_t get_online_device_num(void)
+{
+    return list_dev_get_dev_num(g_onlineList);
+}		/* -----  end of function get_online_device_num  ----- */
+
 uint8_t online_dev_print(void)
 {
     return list_dev_print(g_onlineList);
@@ -349,3 +354,15 @@ uint8_t del_all_groups(uint8_t addrMode, uint16_t addr)
     }
     return 1;
 }		/* -----  end of function del_all_groups  ----- */
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  offline_all_dev
+ *  Description:  move all online device to offline list
+ * =====================================================================================
+ */
+void offline_all_dev ( void )
+{
+    mov_dev_list(g_offlineList, g_onlineList);
+
+}		/* -----  end of function offline_all_dev  ----- */

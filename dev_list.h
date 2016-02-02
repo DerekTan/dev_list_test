@@ -53,6 +53,7 @@ uint8_t list_dev_add(devList_t *lst, devData_t dev);
 devList_t *list_dev_del(devList_t *lst, devData_t dev);
 uint8_t *list_clear(devList_t *lst);
 uint8_t list_dev_get_shortaddr_array(devList_t *lst, uint16_t *pArray);
+uint8_t list_dev_get_dev_num(devList_t *lst);
 devNode_t* list_find_dev_by_shortaddr (devList_t *lst, uint16_t shortaddr);
 devNode_t *list_node_pop_by_shortaddr(devList_t *lst, uint16_t shortaddr);
 devList_t *list_node_add(devList_t *lst, devNode_t *pNode);
@@ -66,4 +67,5 @@ uint8_t add_group_info_to_node( devNode_t *pNode, uint16_t group );
 uint8_t del_group_info_from_node( devNode_t *pNode, uint16_t group );
 devNode_t *dev_node_create( uint16_t shortaddr, const uint8_t extaddr[], uint8_t grpcnt, uint16_t *grplist);
 uint8_t dev_node_update ( devNode_t *pNode, uint8_t grpcnt, uint16_t *grplist );
+void mov_dev_list(devList_t *t_lst, devList_t *s_lst);
 #endif
